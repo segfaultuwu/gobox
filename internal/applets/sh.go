@@ -70,9 +70,13 @@ func Sh(args []string) error {
 			continue
 		}
 
+		rl.Clean()
+
 		if err := runShellLine(line); err != nil {
 			fmt.Fprintln(os.Stderr, "sh:", err)
 		}
+
+		rl.Refresh()
 	}
 
 	return nil
