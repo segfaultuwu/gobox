@@ -39,6 +39,8 @@ APPLETS := \
 	exit \
 	init \
 	fetch \
+	mount \
+	umount \
 	help
 
 .PHONY: all build debug release run clean distclean install uninstall links unlink \
