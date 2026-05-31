@@ -147,12 +147,27 @@ func isShellBuiltin(name string) bool {
 func runAppletProcess(name string, args []string) error {
 	exe, err := os.Executable()
 	if err != nil {
-		return err
+		exe = "/bin/gobox"
 	}
 
 	cmdArgs := append([]string{name}, args...)
 
 	c := exec.Command(exe, cmdArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	c.Env = os.Environ()
+
+	return runForegroundProcess(c)
+}
+
+func runExternal(cmd string, cmdArgs []string) error {
+	path, err := exec.LookPath(cmd)
+	if err != nil {
+		return fmt.Errorf("command not found: %s", cmd)
+	}
+
+	c := exec.Command(path, cmdArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -185,8 +200,7 @@ func runForegroundProcess(c *exec.Cmd) error {
 
 		case err := <-done:
 			if err != nil {
-				if exitErr, ok := err.(*exec.ExitError); ok {
-					_ = exitErr
+				if _, ok := err.(*exec.ExitError); ok {
 					return nil
 				}
 
@@ -196,19 +210,4 @@ func runForegroundProcess(c *exec.Cmd) error {
 			return nil
 		}
 	}
-}
-
-func runExternal(cmd string, cmdArgs []string) error {
-	path, err := exec.LookPath(cmd)
-	if err != nil {
-		return fmt.Errorf("command not found: %s", cmd)
-	}
-
-	c := exec.Command(path, cmdArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	c.Env = os.Environ()
-
-	return c.Run()
 }
