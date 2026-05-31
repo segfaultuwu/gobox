@@ -19,7 +19,7 @@ var defaultEnv = map[string]string{
 
 func init() {
 	initDefaultEnv()
-	Register("sh", "simple gobox shell", Sh)
+	Register("gbsh", "simple gobox shell", Gbsh)
 }
 
 func initDefaultEnv() {
@@ -34,7 +34,7 @@ func initDefaultEnv() {
 	}
 }
 
-func Sh(args []string) error {
+func Gbsh(args []string) error {
 	if len(args) > 0 {
 		return runShellLine(strings.Join(args, " "))
 	}
