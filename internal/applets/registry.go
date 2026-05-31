@@ -20,6 +20,11 @@ func Register(name string, description string, run AppletFunc) {
 	}
 }
 
+func GetApplet(name string) (Applet, bool) {
+	applet, ok := Registry[name]
+	return applet, ok
+}
+
 func RunApplet(name string, args []string) error {
 	applet, ok := Registry[name]
 	if !ok {

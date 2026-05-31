@@ -1,11 +1,18 @@
 APP := gobox
-PREFIX ?= /usr/local
-BINDIR := $(PREFIX)/bin
 
-GO := go
-GOFLAGS :=
+PREFIX ?= /usr/local
+DESTDIR ?=
+BINDIR := $(DESTDIR)$(PREFIX)/bin
+
+GO ?= go
+GOFLAGS ?=
+LDFLAGS ?=
+
+BUILD_DIR := build
+BIN := $(BUILD_DIR)/$(APP)
 
 APPLETS := \
+	sh \
 	echo \
 	cat \
 	pwd \
@@ -23,17 +30,32 @@ APPLETS := \
 	true \
 	false \
 	yes \
-	sleep
+	sleep \
+	which \
+	env \
+	export \
+	unset \
+	cd \
+	exit \
+	help
 
-.PHONY: all build run clean install uninstall links unlink fmt vet test
+.PHONY: all build debug release run clean distclean install uninstall links unlink \
+	fmt vet test check mod tidy list-applets doctor
 
 all: build
 
 build:
-	$(GO) build $(GOFLAGS) -o $(APP) ./cmd/gobox
+	@mkdir -p $(BUILD_DIR)
+	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/gobox
+
+debug: GOFLAGS += -gcflags="all=-N -l"
+debug: build
+
+release: LDFLAGS += -s -w
+release: build
 
 run: build
-	./$(APP)
+	./$(BIN) sh
 
 fmt:
 	$(GO) fmt ./...
@@ -44,21 +66,38 @@ vet:
 test:
 	$(GO) test ./...
 
+check: fmt vet test
+
+mod:
+	$(GO) mod download
+
+tidy:
+	$(GO) mod tidy
+
 clean:
+	rm -rf $(BUILD_DIR)
+
+distclean: clean
 	rm -f $(APP)
 
-install: build
-	install -Dm755 $(APP) $(BINDIR)/$(APP)
-	$(MAKE) links PREFIX=$(PREFIX)
+install: release
+	install -d "$(BINDIR)"
+	install -m 755 "$(BIN)" "$(BINDIR)/$(APP)"
+	$(MAKE) links PREFIX="$(PREFIX)" DESTDIR="$(DESTDIR)"
 
 links:
+	@install -d "$(BINDIR)"
 	@for applet in $(APPLETS); do \
-		ln -sf $(BINDIR)/$(APP) $(BINDIR)/$$applet; \
-		echo "linked $$applet -> $(APP)"; \
+		if [ "$$applet" = "$(APP)" ]; then \
+			continue; \
+		fi; \
+		ln -sfn "$(APP)" "$(BINDIR)/$$applet"; \
+		echo "linked $(BINDIR)/$$applet -> $(APP)"; \
 	done
 
 uninstall: unlink
-	rm -f $(BINDIR)/$(APP)
+	rm -f "$(BINDIR)/$(APP)"
+	@echo "removed $(BINDIR)/$(APP)"
 
 unlink:
 	@for applet in $(APPLETS); do \
@@ -67,3 +106,16 @@ unlink:
 			echo "removed $(BINDIR)/$$applet"; \
 		fi; \
 	done
+
+list-applets:
+	@for applet in $(APPLETS); do \
+		echo "$$applet"; \
+	done
+
+doctor:
+	@echo "app:       $(APP)"
+	@echo "prefix:    $(PREFIX)"
+	@echo "destdir:   $(DESTDIR)"
+	@echo "bindir:    $(BINDIR)"
+	@echo "go:        $$($(GO) version)"
+	@echo "applets:   $(words $(APPLETS))"

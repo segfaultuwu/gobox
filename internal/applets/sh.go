@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 
@@ -110,6 +111,7 @@ func runShellLine(line string) error {
 	if err != nil {
 		return err
 	}
+
 	if len(args) == 0 {
 		return nil
 	}
@@ -117,11 +119,83 @@ func runShellLine(line string) error {
 	cmd := args[0]
 	cmdArgs := args[1:]
 
-	if err := RunApplet(cmd, cmdArgs); err == nil {
-		return nil
+	if isShellBuiltin(cmd) {
+		applet, ok := GetApplet(cmd)
+		if !ok {
+			return fmt.Errorf("unknown builtin: %s", cmd)
+		}
+
+		return applet.Run(cmdArgs)
+	}
+
+	if _, ok := GetApplet(cmd); ok {
+		return runAppletProcess(cmd, cmdArgs)
 	}
 
 	return runExternal(cmd, cmdArgs)
+}
+
+func isShellBuiltin(name string) bool {
+	switch name {
+	case "cd", "exit", "export", "unset":
+		return true
+	default:
+		return false
+	}
+}
+
+func runAppletProcess(name string, args []string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	cmdArgs := append([]string{name}, args...)
+
+	c := exec.Command(exe, cmdArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	c.Env = os.Environ()
+
+	return runForegroundProcess(c)
+}
+
+func runForegroundProcess(c *exec.Cmd) error {
+	if err := c.Start(); err != nil {
+		return err
+	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	defer signal.Stop(sigCh)
+
+	done := make(chan error, 1)
+
+	go func() {
+		done <- c.Wait()
+	}()
+
+	for {
+		select {
+		case sig := <-sigCh:
+			if c.Process != nil {
+				_ = c.Process.Signal(sig)
+			}
+
+		case err := <-done:
+			if err != nil {
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					_ = exitErr
+					return nil
+				}
+
+				return err
+			}
+
+			return nil
+		}
+	}
 }
 
 func runExternal(cmd string, cmdArgs []string) error {
