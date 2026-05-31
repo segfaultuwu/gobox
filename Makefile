@@ -38,6 +38,7 @@ APPLETS := \
 	cd \
 	exit \
 	init \
+	fetch \
 	help
 
 .PHONY: all build debug release run clean distclean install uninstall links unlink \
