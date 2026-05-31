@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Register("head", "show last N lines (default 10", Head)
+	Register("head", "show last N lines (default 10)", Head)
 }
 
 func Head(args []string) error {
