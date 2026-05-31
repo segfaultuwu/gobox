@@ -43,6 +43,8 @@ APPLETS := \
 	umount \
 	dmesg \
 	ps \
+	dhcp \
+	ping \
 	help
 
 .PHONY: all build debug release run clean distclean install uninstall links unlink \
