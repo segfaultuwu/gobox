@@ -14,7 +14,6 @@ func init() {
 
 func Init(args []string) error {
 	logInit("yasld init started")
-	drawAscii()
 
 	setupDirs()
 	mountCoreFilesystems()
@@ -22,7 +21,7 @@ func Init(args []string) error {
 	setHostname("yasld")
 
 	clearConsole()
-	logInit("starting gobox shell")
+	drawAscii()
 
 	console, err := openConsole()
 	if err != nil {
