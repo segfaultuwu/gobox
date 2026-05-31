@@ -18,7 +18,9 @@ func Init(args []string) error {
 	setupDirs()
 	mountCoreFilesystems()
 	setupDevLinks()
-	setHostname("yasld")
+	setHostname("yasldlive")
+
+	configureDHCP()
 
 	clearConsole()
 	drawAscii()
@@ -171,4 +173,61 @@ func writeConsole(msg string) {
 	defer f.Close()
 
 	_, _ = f.WriteString(msg)
+}
+
+type consoleWriter struct{}
+
+func (consoleWriter) Write(p []byte) (int, error) {
+	writeConsole(string(p))
+	return len(p), nil
+}
+
+func configureDHCP() {
+	logInit("configuring network with DHCP")
+
+	if _, err := os.Stat("/bin/gobox"); err != nil {
+		logInit(fmt.Sprintf("dhcp skipped: /bin/gobox missing: %v", err))
+		return
+	}
+
+	waitForNetworkInterface(3 * time.Second)
+
+	cmd := exec.Command("/bin/gobox", "dhcp", "auto")
+	cmd.Stdout = consoleWriter{}
+	cmd.Stderr = consoleWriter{}
+	cmd.Env = []string{
+		"PATH=/bin:/sbin:/usr/bin:/usr/sbin",
+		"SHELL=/bin/sh",
+		"HOME=/root",
+		"TERM=linux",
+		"USER=root",
+		"LOGNAME=root",
+	}
+
+	if err := cmd.Run(); err != nil {
+		logInit(fmt.Sprintf("dhcp failed: %v", err))
+		return
+	}
+
+	logInit("dhcp configured")
+}
+
+func waitForNetworkInterface(timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		entries, err := os.ReadDir("/sys/class/net")
+		if err == nil {
+			for _, entry := range entries {
+				if entry.Name() != "lo" {
+					logInit("network interface found: " + entry.Name())
+					return
+				}
+			}
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	logInit("no network interface found before timeout")
 }
