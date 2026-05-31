@@ -1,6 +1,26 @@
 # Gobox
 
-## Basically a shitty busybox alternative
-## Why it's different:
-- Easily extendable (just put your applet in `./internal/applets/yourapplet.go` and add `yourapplet` to `APPLETS` in `Makefile`)
-- And nothing else lol
+<p align="center">
+  <img src="assets/gobox.png" width="360" alt="Gobox logo">
+</p>
+
+<p align="center">
+  <b>A tiny BusyBox-like userspace toolkit written in Go.</b>
+</p>
+
+---
+
+## What is Gobox?
+
+**Gobox** is a small, experimental BusyBox-style utility collection.
+
+It provides multiple Unix-like applets from a single binary:
+
+```sh
+gobox sh
+gobox ls
+gobox cat file.txt
+gobox echo hello
+gobox fetch
+# and more
+```
