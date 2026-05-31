@@ -1,7 +1,7 @@
 # Gobox
 
 <p align="center">
-  <img src="assets/gobox.png" width="360" alt="Gobox logo">
+  <img src="assets/gobox.png" width="200" alt="Gobox logo">
 </p>
 
 <p align="center">
