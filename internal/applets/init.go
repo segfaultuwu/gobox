@@ -21,7 +21,7 @@ func Init(args []string) error {
 	setHostname("yasldlive")
 
 	startDHCPAuto()
-
+	startDropbearAuto()
 	clearConsole()
 	drawAscii()
 
@@ -197,6 +197,20 @@ type initLogWriter struct{}
 func (initLogWriter) Write(p []byte) (int, error) {
 	writeInitLog(string(p))
 	return len(p), nil
+}
+
+func startDropbearAuto() {
+	time.Sleep(5 * time.Second)
+	go func() {
+		logInit("dropbear: executing")
+		_, err := os.Stat("/usr/sbin/dropbear")
+		if err != nil {
+			logInit(fmt.Sprintf("dropbear: ", err))
+			return
+		} else {
+			exec.Command("/usr/sbin/dropbear", "-R", "-E", "-p", "22")
+		}
+	}()
 }
 
 func startDHCPAuto() {
