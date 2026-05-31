@@ -81,7 +81,7 @@ func setupDevLinks() {
 }
 
 func runShell(console *os.File) error {
-	cmd := exec.Command("/bin/gobox", "sh")
+	cmd := exec.Command("/usr/bin/bash")
 
 	cmd.Stdin = console
 	cmd.Stdout = console
