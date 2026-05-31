@@ -103,17 +103,17 @@ func initEnv() []string {
 }
 
 func openConsole() (*os.File, error) {
-	console, err := os.OpenFile("/dev/console", os.O_RDWR, 0)
+	tty, err := os.OpenFile("/dev/tty1", os.O_RDWR, 0)
 	if err == nil {
-		return console, nil
+		return tty, nil
 	}
 
-	console, err = os.OpenFile("/dev/tty0", os.O_RDWR, 0)
+	tty, err = os.OpenFile("/dev/console", os.O_RDWR, 0)
 	if err == nil {
-		return console, nil
+		return tty, nil
 	}
 
-	return nil, fmt.Errorf("cannot open console or tty0")
+	return nil, fmt.Errorf("cannot open tty1 or console")
 }
 
 func clearConsole() {
