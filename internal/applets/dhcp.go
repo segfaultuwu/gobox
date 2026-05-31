@@ -381,13 +381,12 @@ func applyLease(ifaceName string, lease dhcpLease) error {
 	if lease.Router != nil {
 		route := netlink.Route{
 			LinkIndex: link.Attrs().Index,
+			Dst:       nil,
 			Gw:        lease.Router,
 		}
 
-		_ = netlink.RouteDel(&route)
-
 		if err := netlink.RouteReplace(&route); err != nil {
-			return err
+			return fmt.Errorf("add default route via %s: %w", lease.Router, err)
 		}
 	}
 
