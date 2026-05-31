@@ -13,18 +13,6 @@ import (
 	"gobox/internal/utils"
 )
 
-const (
-	colorReset   = "\033[0m"
-	colorBlack   = "\033[30m"
-	colorRed     = "\033[31m"
-	colorGreen   = "\033[32m"
-	colorYellow  = "\033[33m"
-	colorBlue    = "\033[34m"
-	colorMagenta = "\033[35m"
-	colorCyan    = "\033[36m"
-	colorWhite   = "\033[37m"
-)
-
 func init() {
 	Register("fetch", "show system information", Fastfetch)
 	Register("fastfetch", "show system information", Fastfetch)

@@ -41,6 +41,7 @@ APPLETS := \
 	fetch \
 	mount \
 	umount \
+	dmesg \
 	ps \
 	help
 
