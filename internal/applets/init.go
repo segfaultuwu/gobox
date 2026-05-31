@@ -182,10 +182,20 @@ func writeConsole(msg string) {
 	_, _ = f.WriteString(msg)
 }
 
-type consoleWriter struct{}
+func writeInitLog(msg string) {
+	f, err := os.OpenFile("/run/init.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
 
-func (consoleWriter) Write(p []byte) (int, error) {
-	writeConsole(string(p))
+	_, _ = f.WriteString(msg)
+}
+
+type initLogWriter struct{}
+
+func (initLogWriter) Write(p []byte) (int, error) {
+	writeInitLog(string(p))
 	return len(p), nil
 }
 
@@ -210,8 +220,8 @@ func startDHCPAuto() {
 			logInit(fmt.Sprintf("dhcp: attempt %d on %s", attempt, iface))
 
 			cmd := exec.Command("/bin/gobox", "dhcp", iface)
-			cmd.Stdout = consoleWriter{}
-			cmd.Stderr = consoleWriter{}
+			cmd.Stdout = initLogWriter{}
+			cmd.Stderr = initLogWriter{}
 			cmd.Env = initEnv()
 
 			if err := cmd.Run(); err != nil {
