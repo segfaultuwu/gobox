@@ -14,6 +14,7 @@ func init() {
 
 func Init(args []string) error {
 	logInit("yasld init started")
+	drawAscii()
 
 	setupDirs()
 	mountCoreFilesystems()
@@ -145,6 +146,21 @@ func symlink(oldname, newname string) {
 
 func logInit(msg string) {
 	writeConsole("[init] " + msg + "\n")
+}
+
+func drawAscii() {
+	const ASCII string = `
+
+  ▄▄▄          ▄▄      ▄▄▄▄▄     ▄▄▄      ▄▄▄▄▄▄
+ █▀██  ██    ▄█▀▀█▄   ██▀▀▀▀█▄  ▀██▀     █▀██▀▀██
+   ██  ██    ██  ██   ▀██▄  ▄▀   ██        ██   ██
+   ██  ██    ██▀▀██     ▀██▄▄    ██        ██   ██
+   ██  ██  ▄ ██  ██   ▄   ▀██▄   ██      ▄ ██   ██
+   ▀█████▄ ▀██▀  ▀█▄█ ▀██████▀  ████████ ▀██▀███▀
+   ▄   ██
+   ▀████▀
+	`
+	fmt.Println(ASCII)
 }
 
 func writeConsole(msg string) {
