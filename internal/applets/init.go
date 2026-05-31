@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
 )
 
 func init() {
@@ -13,15 +14,17 @@ func init() {
 func Init(args []string) error {
 	writeConsole("[init] yasld init started\n")
 
-	_ = os.MkdirAll("/proc", 0755)
-	_ = os.MkdirAll("/sys", 0755)
-	_ = os.MkdirAll("/dev", 0755)
-	_ = os.MkdirAll("/tmp", 0777)
+	mkdir("/proc", 0555)
+	mkdir("/sys", 0555)
+	mkdir("/dev", 0755)
+	mkdir("/tmp", 0777)
+	mkdir("/root", 0700)
 
-	run("mount", "-t", "proc", "proc", "/proc")
-	run("mount", "-t", "sysfs", "sysfs", "/sys")
-	run("mount", "-t", "devtmpfs", "devtmpfs", "/dev")
+	mount("proc", "/proc", "proc", 0, "")
+	mount("sysfs", "/sys", "sysfs", 0, "")
+	mount("devtmpfs", "/dev", "devtmpfs", 0, "")
 
+	writeConsole("[init] mounted proc/sys/dev\n")
 	writeConsole("[init] starting gobox shell\n")
 
 	console, err := os.OpenFile("/dev/console", os.O_RDWR, 0)
@@ -36,8 +39,8 @@ func Init(args []string) error {
 	cmd.Stderr = console
 	cmd.Env = []string{
 		"PATH=/bin:/sbin:/usr/bin:/usr/sbin",
-		"SHELL=/bin/gobox",
-		"HOME=/",
+		"SHELL=/bin/sh",
+		"HOME=/root",
 		"TERM=linux",
 	}
 
@@ -46,15 +49,20 @@ func Init(args []string) error {
 	}
 
 	for {
-		run("sleep", "1")
+		_ = syscall.Pause()
 	}
 }
 
-func run(name string, args ...string) {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	_ = cmd.Run()
+func mkdir(path string, mode os.FileMode) {
+	if err := os.MkdirAll(path, mode); err != nil {
+		writeConsole(fmt.Sprintf("[init] mkdir %s failed: %v\n", path, err))
+	}
+}
+
+func mount(source, target, fstype string, flags uintptr, data string) {
+	if err := syscall.Mount(source, target, fstype, flags, data); err != nil {
+		writeConsole(fmt.Sprintf("[init] mount %s on %s failed: %v\n", fstype, target, err))
+	}
 }
 
 func writeConsole(msg string) {
