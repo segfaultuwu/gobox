@@ -11,43 +11,6 @@ LDFLAGS ?=
 BUILD_DIR := build
 BIN := $(BUILD_DIR)/$(APP)
 
-APPLETS := \
-	sh \
-	echo \
-	cat \
-	pwd \
-	ls \
-	mkdir \
-	rm \
-	touch \
-	cp \
-	mv \
-	head \
-	tail \
-	whoami \
-	uname \
-	clear \
-	true \
-	false \
-	yes \
-	sleep \
-	which \
-	env \
-	export \
-	unset \
-	cd \
-	exit \
-	init \
-	fetch \
-	mount \
-	umount \
-	dmesg \
-	ps \
-	dhcp \
-	ping \
-	setcap \
-	help
-
 .PHONY: all build debug release run clean distclean install uninstall links unlink \
 	fmt vet test check mod tidy list-applets doctor
 
@@ -55,7 +18,7 @@ all: build
 
 build:
 	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/gobox
+	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN) .
 
 debug: GOFLAGS += -gcflags="all=-N -l"
 debug: build
@@ -94,10 +57,13 @@ install: release
 	install -m 755 "$(BIN)" "$(BINDIR)/$(APP)"
 	$(MAKE) links PREFIX="$(PREFIX)" DESTDIR="$(DESTDIR)"
 
-links:
+links: build
 	@install -d "$(BINDIR)"
-	@for applet in $(APPLETS); do \
+	@for applet in $$("./$(BIN)" applets); do \
 		if [ "$$applet" = "$(APP)" ]; then \
+			continue; \
+		fi; \
+		if [ "$$applet" = "applets" ]; then \
 			continue; \
 		fi; \
 		ln -sfn "$(APP)" "$(BINDIR)/$$applet"; \
@@ -108,23 +74,22 @@ uninstall: unlink
 	rm -f "$(BINDIR)/$(APP)"
 	@echo "removed $(BINDIR)/$(APP)"
 
-unlink:
-	@for applet in $(APPLETS); do \
+unlink: build
+	@for applet in $$("./$(BIN)" applets); do \
 		if [ -L "$(BINDIR)/$$applet" ]; then \
 			rm -f "$(BINDIR)/$$applet"; \
 			echo "removed $(BINDIR)/$$applet"; \
 		fi; \
 	done
 
-list-applets:
-	@for applet in $(APPLETS); do \
-		echo "$$applet"; \
-	done
+list-applets: build
+	@./$(BIN) applets
 
-doctor:
+doctor: build
 	@echo "app:       $(APP)"
 	@echo "prefix:    $(PREFIX)"
 	@echo "destdir:   $(DESTDIR)"
 	@echo "bindir:    $(BINDIR)"
 	@echo "go:        $$($(GO) version)"
-	@echo "applets:   $(words $(APPLETS))"
+	@echo "applets:"
+	@./$(BIN) applets | sed 's/^/  /'
