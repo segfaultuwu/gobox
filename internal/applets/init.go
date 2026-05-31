@@ -153,7 +153,7 @@ func symlink(oldname, newname string) {
 }
 
 func logInit(msg string) {
-	writeConsole("[init] " + msg + "\n")
+	writeInitLog("[init] " + msg + "\n")
 }
 
 func drawAscii() {
