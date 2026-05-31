@@ -2,31 +2,35 @@ package applets
 
 import (
 	"fmt"
-	"gobox/internal/utils"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+
+	"gobox/internal/utils"
 
 	"github.com/chzyer/readline"
 )
 
+var defaultEnv = map[string]string{
+	"PATH": "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin",
+}
+
 func init() {
+	initDefaultEnv()
 	Register("sh", "simple gobox shell", Sh)
 }
 
-func buildPrompt() string {
-	var suffix string = "$"
-	if utils.IsRoot() {
-		suffix = "#"
+func initDefaultEnv() {
+	for key, value := range defaultEnv {
+		if os.Getenv(key) == "" {
+			_ = os.Setenv(key, value)
+		}
 	}
-	pwd, err := os.Getwd()
-	if err != nil {
-		pwd = "?"
+
+	if os.Getenv("SHELL") == "" {
+		_ = os.Setenv("SHELL", "gobox")
 	}
-	home, err := os.UserHomeDir()
-	if err == nil && strings.HasPrefix(pwd, home) {
-		pwd = "~" + strings.TrimPrefix(pwd, home)
-	}
-	return fmt.Sprintf("[ \033[33m%s \033[0m] %s ", pwd, suffix)
 }
 
 func Sh(args []string) error {
@@ -36,7 +40,7 @@ func Sh(args []string) error {
 
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          buildPrompt(),
-		HistoryFile:     "/tmp/gobox_history",
+		HistoryFile:     historyPath(),
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 		AutoComplete:    shellCompleter(),
@@ -51,7 +55,7 @@ func Sh(args []string) error {
 
 		line, err := rl.Readline()
 		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
+			if strings.TrimSpace(line) == "" {
 				continue
 			}
 		}
@@ -73,8 +77,39 @@ func Sh(args []string) error {
 	return nil
 }
 
+func buildPrompt() string {
+	suffix := "$"
+	if utils.IsRoot() {
+		suffix = "#"
+	}
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		pwd = "?"
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil && strings.HasPrefix(pwd, home) {
+		pwd = "~" + strings.TrimPrefix(pwd, home)
+	}
+
+	return fmt.Sprintf("[ \033[33m%s\033[0m ] %s ", pwd, suffix)
+}
+
+func historyPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/gobox_history"
+	}
+
+	return filepath.Join(home, ".gobox_history")
+}
+
 func runShellLine(line string) error {
-	args := utils.SplitArgs(line)
+	args, err := utils.SplitArgs(line)
+	if err != nil {
+		return err
+	}
 	if len(args) == 0 {
 		return nil
 	}
@@ -82,49 +117,24 @@ func runShellLine(line string) error {
 	cmd := args[0]
 	cmdArgs := args[1:]
 
-	switch cmd {
-	case "exit":
-		os.Exit(0)
-
-	case "cd":
-		return shellCd(cmdArgs)
-
-	case "help":
-		shellHelp()
+	if err := RunApplet(cmd, cmdArgs); err == nil {
 		return nil
 	}
 
-	return RunApplet(cmd, cmdArgs)
+	return runExternal(cmd, cmdArgs)
 }
 
-func shellCd(args []string) error {
-	var dir string
-
-	if len(args) == 0 {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-
-		dir = home
-	} else {
-		dir = args[0]
+func runExternal(cmd string, cmdArgs []string) error {
+	path, err := exec.LookPath(cmd)
+	if err != nil {
+		return fmt.Errorf("command not found: %s", cmd)
 	}
 
-	return os.Chdir(dir)
-}
+	c := exec.Command(path, cmdArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	c.Env = os.Environ()
 
-func shellHelp() {
-	fmt.Println("gobox shell")
-	fmt.Println()
-	fmt.Println("Builtins:")
-	fmt.Println("  cd [dir]")
-	fmt.Println("  exit")
-	fmt.Println("  help")
-	fmt.Println()
-	fmt.Println("Applets:")
-
-	for name := range Registry {
-		fmt.Println("  " + name)
-	}
+	return c.Run()
 }

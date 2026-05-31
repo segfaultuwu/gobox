@@ -33,7 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := applet.Exec(args); err != nil {
+	if err := applet.Run(args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", cmd, err)
 		os.Exit(1)
 	}

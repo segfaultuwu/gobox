@@ -2,27 +2,29 @@ package applets
 
 import "fmt"
 
+type AppletFunc func(args []string) error
+
 type Applet struct {
-	Name string
-	Help string
-	Exec func(args []string) error
+	Name        string
+	Description string
+	Run         AppletFunc
 }
 
 var Registry = map[string]Applet{}
 
-func Register(name string, help string, exec func(args []string) error) {
+func Register(name string, description string, run AppletFunc) {
 	Registry[name] = Applet{
-		Name: name,
-		Help: help,
-		Exec: exec,
+		Name:        name,
+		Description: description,
+		Run:         run,
 	}
 }
 
 func RunApplet(name string, args []string) error {
 	applet, ok := Registry[name]
 	if !ok {
-		return fmt.Errorf("unknown command: %s", name)
+		return fmt.Errorf("unknown applet: %s", name)
 	}
 
-	return applet.Exec(args)
+	return applet.Run(args)
 }

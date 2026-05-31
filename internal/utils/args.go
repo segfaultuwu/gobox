@@ -1,8 +1,11 @@
 package utils
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-func SplitArgs(line string) []string {
+func SplitArgs(line string) ([]string, error) {
 	var args []string
 	var current strings.Builder
 
@@ -12,12 +15,25 @@ func SplitArgs(line string) []string {
 
 	for _, r := range line {
 		if escaped {
-			current.WriteRune(r)
+			switch r {
+			case 'n':
+				current.WriteRune('\n')
+			case 't':
+				current.WriteRune('\t')
+			case 'r':
+				current.WriteRune('\r')
+			case '\\', '"', '\'':
+				current.WriteRune(r)
+			default:
+				current.WriteRune('\\')
+				current.WriteRune(r)
+			}
+
 			escaped = false
 			continue
 		}
 
-		if r == '\\' {
+		if r == '\\' && !inSingle {
 			escaped = true
 			continue
 		}
@@ -48,9 +64,21 @@ func SplitArgs(line string) []string {
 		current.WriteRune(r)
 	}
 
+	if escaped {
+		return nil, fmt.Errorf("unfinished escape")
+	}
+
+	if inSingle {
+		return nil, fmt.Errorf("unterminated single quote")
+	}
+
+	if inDouble {
+		return nil, fmt.Errorf("unterminated double quote")
+	}
+
 	if current.Len() > 0 {
 		args = append(args, current.String())
 	}
 
-	return args
+	return args, nil
 }

@@ -14,6 +14,7 @@ func Pwd(args []string) error {
 	if err != nil {
 		return err
 	}
+
 	fmt.Println(cwd)
 	return nil
 }
