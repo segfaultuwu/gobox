@@ -200,8 +200,8 @@ func (initLogWriter) Write(p []byte) (int, error) {
 }
 
 func startDropbearAuto() {
-	time.Sleep(5 * time.Second)
 	go func() {
+		time.Sleep(5 * time.Second)
 		logInit("dropbear: executing")
 		_, err := os.Stat("/usr/sbin/dropbear")
 		if err != nil {
