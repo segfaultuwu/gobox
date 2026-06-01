@@ -18,15 +18,11 @@ func Init(args []string) error {
 	setupDirs()
 	mountCoreFilesystems()
 	setupDevLinks()
-<<<<<<< HEAD
-	setHostname("yasld")
-
-=======
 	setHostname("yasldlive")
 
 	startDHCPAuto()
 	startDropbearAuto()
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
+
 	clearConsole()
 	drawAscii()
 
@@ -56,10 +52,7 @@ func setupDirs() {
 	mkdir("/dev", 0755)
 	mkdir("/dev/pts", 0755)
 	mkdir("/tmp", 01777)
-<<<<<<< HEAD
-=======
 	mkdir("/run", 0755)
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 	mkdir("/root", 0700)
 	mkdir("/etc", 0755)
 	mkdir("/bin", 0755)
@@ -73,18 +66,12 @@ func mountCoreFilesystems() {
 	mount("proc", "/proc", "proc", 0, "")
 	mount("sysfs", "/sys", "sysfs", 0, "")
 	mount("devtmpfs", "/dev", "devtmpfs", 0, "")
-<<<<<<< HEAD
-	mkdir("/dev/pts", 0755)
-	mount("devpts", "/dev/pts", "devpts", 0, "gid=5,mode=620")
-	mount("tmpfs", "/tmp", "tmpfs", 0, "mode=1777")
-=======
 
 	mkdir("/dev/pts", 0755)
 	mount("devpts", "/dev/pts", "devpts", 0, "gid=5,mode=620")
 
 	mount("tmpfs", "/tmp", "tmpfs", 0, "mode=1777")
 	mount("tmpfs", "/run", "tmpfs", 0, "mode=0755")
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 }
 
 func setupDevLinks() {
@@ -95,27 +82,24 @@ func setupDevLinks() {
 }
 
 func runShell(console *os.File) error {
-<<<<<<< HEAD
-	cmd := exec.Command("/bin/gobox", "sh")
-=======
 	cmd := exec.Command("/bin/gobox", "login")
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 
 	cmd.Stdin = console
 	cmd.Stdout = console
 	cmd.Stderr = console
-<<<<<<< HEAD
-
-	cmd.Env = []string{
-=======
 	cmd.Env = initEnv()
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid:  true,
+		Setctty: true,
+		Ctty:    int(console.Fd()),
+	}
 
 	return cmd.Run()
 }
 
 func initEnv() []string {
 	return []string{
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 		"PATH=/bin:/sbin:/usr/bin:/usr/sbin",
 		"SHELL=/bin/sh",
 		"HOME=/root",
@@ -123,24 +107,6 @@ func initEnv() []string {
 		"USER=root",
 		"LOGNAME=root",
 	}
-<<<<<<< HEAD
-
-	return cmd.Run()
-}
-
-func openConsole() (*os.File, error) {
-	console, err := os.OpenFile("/dev/console", os.O_RDWR, 0)
-	if err == nil {
-		return console, nil
-	}
-
-	console, err = os.OpenFile("/dev/tty0", os.O_RDWR, 0)
-	if err == nil {
-		return console, nil
-	}
-
-	return nil, fmt.Errorf("cannot open console or tty0")
-=======
 }
 
 func openConsole() (*os.File, error) {
@@ -155,7 +121,6 @@ func openConsole() (*os.File, error) {
 	}
 
 	return nil, fmt.Errorf("cannot open tty1 or console")
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 }
 
 func clearConsole() {
@@ -195,19 +160,11 @@ func symlink(oldname, newname string) {
 }
 
 func logInit(msg string) {
-<<<<<<< HEAD
-	writeConsole("[init] " + msg + "\n")
-=======
 	writeInitLog("[init] " + msg + "\n")
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 }
 
 func drawAscii() {
 	const ASCII string = `
-<<<<<<< HEAD
-
-=======
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
   ▄▄▄          ▄▄      ▄▄▄▄▄     ▄▄▄      ▄▄▄▄▄▄
  █▀██  ██    ▄█▀▀█▄   ██▀▀▀▀█▄  ▀██▀     █▀██▀▀██
    ██  ██    ██  ██   ▀██▄  ▄▀   ██        ██   ██
@@ -216,14 +173,9 @@ func drawAscii() {
    ▀█████▄ ▀██▀  ▀█▄█ ▀██████▀  ████████ ▀██▀███▀
    ▄   ██
    ▀████▀
-<<<<<<< HEAD
-	`
-	fmt.Println(ASCII)
-=======
 
 `
 	writeConsole(ASCII)
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
 }
 
 func writeConsole(msg string) {
@@ -236,8 +188,6 @@ func writeConsole(msg string) {
 
 	_, _ = f.WriteString(msg)
 }
-<<<<<<< HEAD
-=======
 
 func writeInitLog(msg string) {
 	f, err := os.OpenFile("/run/init.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -258,15 +208,40 @@ func (initLogWriter) Write(p []byte) (int, error) {
 
 func startDropbearAuto() {
 	go func() {
+		logInit("dropbear: waiting before start")
 		time.Sleep(5 * time.Second)
-		logInit("dropbear: executing")
-		_, err := os.Stat("/usr/sbin/dropbear")
-		if err != nil {
-			logInit(fmt.Sprintf("dropbear: ", err))
+
+		if _, err := os.Stat("/usr/sbin/dropbear"); err != nil {
+			logInit(fmt.Sprintf("dropbear: skipped, missing /usr/sbin/dropbear: %v", err))
 			return
-		} else {
-			exec.Command("/usr/sbin/dropbear", "-R", "-E", "-p", "22")
 		}
+
+		if _, err := os.Stat("/etc/dropbear"); err != nil {
+			_ = os.MkdirAll("/etc/dropbear", 0700)
+		}
+
+		logInit("dropbear: starting")
+
+		cmd := exec.Command("/usr/sbin/dropbear", "-R", "-E", "-s", "-p", "22")
+		cmd.Stdout = initLogWriter{}
+		cmd.Stderr = initLogWriter{}
+		cmd.Env = initEnv()
+
+		if err := cmd.Start(); err != nil {
+			logInit(fmt.Sprintf("dropbear: failed: %v", err))
+			return
+		}
+
+		logInit(fmt.Sprintf("dropbear: started pid %d", cmd.Process.Pid))
+
+		go func() {
+			err := cmd.Wait()
+			if err != nil {
+				logInit(fmt.Sprintf("dropbear: exited: %v", err))
+			} else {
+				logInit("dropbear: exited")
+			}
+		}()
 	}()
 }
 
@@ -331,4 +306,3 @@ func waitForNetworkInterface(timeout time.Duration) string {
 
 	return ""
 }
->>>>>>> b7b7a7e63e6012585a7892e22886fbc2d37f09ca
